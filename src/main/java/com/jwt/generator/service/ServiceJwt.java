@@ -47,13 +47,14 @@ public class ServiceJwt {
   public RsaData generateKeys() {
     try {
       log.info("================Generando llave Privada y Publica================");
-      KeyGenerator keyGenerator = new KeyGenerator().generatePublicKey();
+      final KeyGenerator keyGenerator = new KeyGenerator().generatePublicKey();
 
       log.info("===============Imprimiendo llave Privada y Publica===============");
       keyGenerator.logKeys();
 
       log.info("==================Guardando llave Privada en BD==================\n");
-      keyRepository.savePrivateKeyInDb(keyGenerator.privateKeyData());
+      savePrivateKeyInDb(keyGenerator.privateKeyData());
+
       return keyGenerator.publicKeyData();
     } catch (JwtGeneratorException jgex) {
       log.error(Constants.ERROR, jgex);
@@ -62,6 +63,15 @@ public class ServiceJwt {
       log.error(Constants.ERROR, ex);
       throw new JwtGeneratorException(ex.getMessage(), LocationError.GENERATE_KEY.name());
     }
+  }
+
+  private void savePrivateKeyInDb(RsaData privateKeyData) {
+    Integer result = keyRepository.savePrivateKeyInDb(privateKeyData);
+    if (result == 0) {
+      throw new JwtGeneratorException(Constants.ERROR_SAVING_KEY,
+          LocationError.SAVING_KEY_DB.name());
+    }
+
   }
 
   /**
