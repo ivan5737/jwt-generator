@@ -11,6 +11,6 @@ public class JwtDecrypted {
 
   private String jwt;
 
-  private String id;
+  private String keyId;
 
 }

@@ -19,7 +19,7 @@ public class PrivateKeyRepository {
    * @return Integer value of the update method
    */
   public Integer savePrivateKeyInDb(RsaData rsaData) {
-    Object[] params = {rsaData.getId(), rsaData.getModulus(), rsaData.getExponent()};
+    Object[] params = {rsaData.getKeyId(), rsaData.getModulus(), rsaData.getExponent()};
     return jdbcTemplate.update("INSERT INTO privateKey VALUES (?,?,?)", params);
   }
 

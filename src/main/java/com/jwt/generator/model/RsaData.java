@@ -20,6 +20,6 @@ public final class RsaData {
 
   private BigInteger exponent;
   
-  private String id;
+  private String keyId;
 
 }

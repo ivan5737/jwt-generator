@@ -85,7 +85,9 @@ public class ServiceJwt {
       log.info("==================Generando Claims===================");
       JWTClaimsSet.Builder claimsSet = generateClaim();
 
-      JWEHeader header = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A128GCM);
+      JWEHeader header =
+          new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256CBC_HS512)
+              .keyID(rsaData.getKeyId()).build();
       EncryptedJWT jwt = new EncryptedJWT(header, claimsSet.build());
 
       log.info("=================Generando Public Key================");
@@ -95,7 +97,7 @@ public class ServiceJwt {
       log.info("===================Encriptando JWT===================\n");
       jwt.encrypt(encrypter);
 
-      return generateJwtResponse(jwt, rsaData.getId());
+      return generateJwtResponse(jwt);
     } catch (Exception ex) {
       log.error(Constants.ERROR, ex);
       throw new JwtGeneratorException(ex.getMessage(), LocationError.GENERATE_JWT.name());
@@ -131,9 +133,9 @@ public class ServiceJwt {
     return (RSAPublicKey) keyFactory.generatePublic(publicKeySpec);
   }
 
-  private JwtDecrypted generateJwtResponse(EncryptedJWT jwt, String id) {
+  private JwtDecrypted generateJwtResponse(EncryptedJWT jwt) {
     String jwtString = jwt.serialize();
-    return JwtDecrypted.builder().jwt(jwtString).id(id).build();
+    return JwtDecrypted.builder().jwt(jwtString).build();
   }
 
   /**
@@ -144,18 +146,19 @@ public class ServiceJwt {
    */
   public JwtData decryptJwt(JwtDecrypted jwtDecrypted) {
     try {
+      log.info("=======================Generando JWT Enc========================\n");
+      EncryptedJWT jwtOut = EncryptedJWT.parse(jwtDecrypted.getJwt());
+
       log.info("==================Buscando llave Privada en BD==================");
-      RsaData privateKey = keyRepository.getPrivateKey(jwtDecrypted.getId());
+      RsaData privateKey = keyRepository.getPrivateKey(jwtOut.getHeader().getKeyID());
 
       log.info("===================Generando RSA Private Key====================");
       RSAPrivateKey privateRsaKey = generatePrivateKey(privateKey);
       RSADecrypter decrypter = new RSADecrypter(privateRsaKey);
 
-      log.info("=======================Generando JWT Enc========================\n");
-      EncryptedJWT jwt = EncryptedJWT.parse(jwtDecrypted.getJwt());
-      jwt.decrypt(decrypter);
+      jwtOut.decrypt(decrypter);
 
-      return bindingJwtData(jwt);
+      return bindingJwtData(jwtOut);
     } catch (EmptyResultDataAccessException daex) {
       log.error(Constants.ERROR, daex);
       throw new JwtGeneratorException(Constants.ERROR_ID_SEARCH,
@@ -166,18 +169,18 @@ public class ServiceJwt {
     }
   }
 
-  private JwtData bindingJwtData(EncryptedJWT jwt) throws ParseException {
-    return JwtData.builder().issuer(jwt.getJWTClaimsSet().getIssuer())
-        .subject(jwt.getJWTClaimsSet().getSubject())
-        .expirationTime(jwt.getJWTClaimsSet().getExpirationTime())
-        .notBeforeTime(jwt.getJWTClaimsSet().getNotBeforeTime())
-        .jwtId(jwt.getJWTClaimsSet().getJWTID())
-        .appId((String) jwt.getJWTClaimsSet().getClaim("appId"))
-        .userId((String) jwt.getJWTClaimsSet().getClaim("userId"))
-        .role((String) jwt.getJWTClaimsSet().getClaim("role"))
-        .applicationType((String) jwt.getJWTClaimsSet().getClaim("applicationType"))
-        .clientRemoteAddress((String) jwt.getJWTClaimsSet().getClaim("clientRemoteAddress"))
-        .build();
+  private JwtData bindingJwtData(EncryptedJWT jwtOut) throws ParseException {
+    return JwtData.builder().issuer(jwtOut.getJWTClaimsSet().getIssuer())
+        .subject(jwtOut.getJWTClaimsSet().getSubject())
+        .expirationTime(jwtOut.getJWTClaimsSet().getExpirationTime())
+        .notBeforeTime(jwtOut.getJWTClaimsSet().getNotBeforeTime())
+        .jwtId(jwtOut.getJWTClaimsSet().getJWTID())
+        .appId((String) jwtOut.getJWTClaimsSet().getClaim("appId"))
+        .userId((String) jwtOut.getJWTClaimsSet().getClaim("userId"))
+        .role((String) jwtOut.getJWTClaimsSet().getClaim("role"))
+        .applicationType((String) jwtOut.getJWTClaimsSet().getClaim("applicationType"))
+        .clientRemoteAddress((String) jwtOut.getJWTClaimsSet().getClaim("clientRemoteAddress"))
+        .keyId(jwtOut.getHeader().getKeyID()).build();
   }
 
   private RSAPrivateKey generatePrivateKey(RsaData rsaData)

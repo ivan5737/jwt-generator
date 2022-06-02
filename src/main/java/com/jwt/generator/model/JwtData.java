@@ -30,5 +30,7 @@ public class JwtData {
   private String applicationType;
 
   private String clientRemoteAddress;
+  
+  private String keyId;
 
 }
