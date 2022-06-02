@@ -32,7 +32,7 @@ public class PrivateKeyRepository {
   public RsaData getPrivateKey(String id) {
     Object[] params = {id};
     return jdbcTemplate.queryForObject("SELECT * FROM privateKey WHERE id = ?",
-        new BeanPropertyRowMapper<RsaData>(RsaData.class), params);
+        new BeanPropertyRowMapper<>(RsaData.class), params);
   }
 
 }
