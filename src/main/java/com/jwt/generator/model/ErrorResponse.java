@@ -1,11 +1,12 @@
 package com.jwt.generator.model;
 
-import java.io.Serializable;
-import java.time.Instant;
-import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
+
+import java.io.Serializable;
+import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
