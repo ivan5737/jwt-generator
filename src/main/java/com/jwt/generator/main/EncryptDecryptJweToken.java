@@ -15,7 +15,7 @@ import java.util.Date;
 import java.util.UUID;
 
 @Slf4j
-public class EncrypyDecryptJweToken {
+public class EncryptDecryptJweToken {
 
   /**
    * Main method to test the JWE token generator.
