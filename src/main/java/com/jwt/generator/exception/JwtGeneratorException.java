@@ -11,6 +11,12 @@ public class JwtGeneratorException extends RuntimeException {
   @Getter
   private final ErrorResponse errorResponse;
 
+  /**
+   * Method to build the custom JwtGeneratorException.
+   * 
+   * @param message of the exception.
+   * @param locationError the exact location of the exception.
+   */
   public JwtGeneratorException(String message, String locationError) {
     super(message);
     this.errorResponse = ErrorResponse.builder().errorCause(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -1,6 +1,6 @@
 package com.jwt.generator.repository;
 
-import com.jwt.generator.model.RSAdata;
+import com.jwt.generator.model.RsaData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,15 +12,27 @@ public class PrivateKeyRepository {
 
   private final JdbcTemplate jdbcTemplate;
 
-  public Integer savePrivateKeyInDb(RSAdata rsaData) {
+  /**
+   * Method to save the RSA data in the DB.
+   * 
+   * @param rsaData that contains the private key values.
+   * @return Integer value of the update method
+   */
+  public Integer savePrivateKeyInDb(RsaData rsaData) {
     Object[] params = {rsaData.getId(), rsaData.getModulus(), rsaData.getExponent()};
     return jdbcTemplate.update("INSERT INTO privateKey VALUES (?,?,?)", params);
   }
 
-  public RSAdata getPrivateKey(String id) {
+  /**
+   * Method to get the private key from the DB.
+   * 
+   * @param id of the private key, to find every private key
+   * @return RsaData
+   */
+  public RsaData getPrivateKey(String id) {
     Object[] params = {id};
     return jdbcTemplate.queryForObject("SELECT * FROM privateKey WHERE id = ?",
-        new BeanPropertyRowMapper<RSAdata>(RSAdata.class), params);
+        new BeanPropertyRowMapper<RsaData>(RsaData.class), params);
   }
 
 }

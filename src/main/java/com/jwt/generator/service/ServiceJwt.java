@@ -6,7 +6,7 @@ import com.jwt.generator.exception.JwtGeneratorException;
 import com.jwt.generator.exception.constants.LocationError;
 import com.jwt.generator.model.JwtData;
 import com.jwt.generator.model.JwtDecrypted;
-import com.jwt.generator.model.RSAdata;
+import com.jwt.generator.model.RsaData;
 import com.jwt.generator.repository.PrivateKeyRepository;
 import com.jwt.generator.util.KeyGenerator;
 import com.nimbusds.jose.EncryptionMethod;
@@ -16,6 +16,11 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.stereotype.Service;
+
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
@@ -26,10 +31,6 @@ import java.security.spec.RSAPublicKeySpec;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -38,7 +39,12 @@ public class ServiceJwt {
 
   private final PrivateKeyRepository keyRepository;
 
-  public RSAdata generateKeys() {
+  /**
+   * First method that generate the Public and Private keys, also save the Private key in the DB.
+   * 
+   * @return the RsaData with the Modulus and Exponent of the Public key and the Id.
+   */
+  public RsaData generateKeys() {
     try {
       log.info("================Generando llave Privada y Publica================");
       KeyGenerator keyGenerator = new KeyGenerator().generatePublicKey();
@@ -49,13 +55,22 @@ public class ServiceJwt {
       log.info("==================Guardando llave Privada en BD==================\n");
       keyRepository.savePrivateKeyInDb(keyGenerator.privateKeyData());
       return keyGenerator.publicKeyData();
-    } catch (Exception e) {
-      log.error(Constants.ERROR, e);
-      throw new JwtGeneratorException(e.getMessage(), LocationError.GENERATE_KEY.name());
+    } catch (JwtGeneratorException jgex) {
+      log.error(Constants.ERROR, jgex);
+      throw jgex;
+    } catch (Exception ex) {
+      log.error(Constants.ERROR, ex);
+      throw new JwtGeneratorException(ex.getMessage(), LocationError.GENERATE_KEY.name());
     }
   }
 
-  public JwtDecrypted generateJwt(RSAdata rsaData) {
+  /**
+   * Second method that generate the JWT from the Public key.
+   * 
+   * @param rsaData that contains the Modulus, Exponent and ID of the Public key.
+   * @return JwtDecrypted
+   */
+  public JwtDecrypted generateJwt(RsaData rsaData) {
     try {
       log.info("==================Generando Claims===================");
       JWTClaimsSet.Builder claimsSet = generateClaim();
@@ -71,9 +86,9 @@ public class ServiceJwt {
       jwt.encrypt(encrypter);
 
       return generateJwtResponse(jwt, rsaData.getId());
-    } catch (Exception e) {
-      log.error(Constants.ERROR, e);
-      throw new JwtGeneratorException(e.getMessage(), LocationError.GENERATE_JWT.name());
+    } catch (Exception ex) {
+      log.error(Constants.ERROR, ex);
+      throw new JwtGeneratorException(ex.getMessage(), LocationError.GENERATE_JWT.name());
     }
 
   }
@@ -98,7 +113,7 @@ public class ServiceJwt {
     return claimsSet;
   }
 
-  private RSAPublicKey generateRsaPublicKey(RSAdata rsaData)
+  private RSAPublicKey generateRsaPublicKey(RsaData rsaData)
       throws NoSuchAlgorithmException, InvalidKeySpecException {
     KeyFactory keyFactory = KeyFactory.getInstance(Constants.ALGORITHM);
     RSAPublicKeySpec publicKeySpec =
@@ -111,10 +126,16 @@ public class ServiceJwt {
     return JwtDecrypted.builder().jwt(jwtString).id(id).build();
   }
 
+  /**
+   * Third method that decrypt the JWT with the Private Key saved in the DB,
+   * 
+   * @param jwtDecrypted variable that contains the JWT decrypted with the ID.
+   * @return JwtData decrypted.
+   */
   public JwtData decryptJwt(JwtDecrypted jwtDecrypted) {
     try {
       log.info("==================Buscando llave Privada en BD==================");
-      RSAdata privateKey = keyRepository.getPrivateKey(jwtDecrypted.getId());
+      RsaData privateKey = keyRepository.getPrivateKey(jwtDecrypted.getId());
 
       log.info("===================Generando RSA Private Key====================");
       RSAPrivateKey privateRsaKey = generatePrivateKey(privateKey);
@@ -125,12 +146,13 @@ public class ServiceJwt {
       jwt.decrypt(decrypter);
 
       return bindingJwtData(jwt);
-    } catch (EmptyResultDataAccessException e) {
+    } catch (EmptyResultDataAccessException daex) {
+      log.error(Constants.ERROR, daex);
       throw new JwtGeneratorException(Constants.ERROR_ID_SEARCH,
           LocationError.DECRYPTED_JWT_SEARCHING_ID.name());
-    } catch (Exception e) {
-      log.error(Constants.ERROR, e);
-      throw new JwtGeneratorException(e.getMessage(), LocationError.DECRYPTED_JWT.name());
+    } catch (Exception ex) {
+      log.error(Constants.ERROR, ex);
+      throw new JwtGeneratorException(ex.getMessage(), LocationError.DECRYPTED_JWT.name());
     }
   }
 
@@ -148,7 +170,7 @@ public class ServiceJwt {
         .build();
   }
 
-  private RSAPrivateKey generatePrivateKey(RSAdata rsaData)
+  private RSAPrivateKey generatePrivateKey(RsaData rsaData)
       throws NoSuchAlgorithmException, InvalidKeySpecException {
     KeyFactory keyFactory = KeyFactory.getInstance(Constants.ALGORITHM);
     RSAPrivateKeySpec privateKeySpec =

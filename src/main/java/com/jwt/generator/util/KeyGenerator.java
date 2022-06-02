@@ -1,7 +1,11 @@
 package com.jwt.generator.util;
 
 import com.jwt.generator.constants.Constants;
-import com.jwt.generator.model.RSAdata;
+import com.jwt.generator.exception.JwtGeneratorException;
+import com.jwt.generator.exception.constants.LocationError;
+import com.jwt.generator.model.RsaData;
+import lombok.extern.slf4j.Slf4j;
+
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -12,7 +16,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class KeyGenerator {
@@ -23,34 +26,49 @@ public class KeyGenerator {
 
   private String id;
 
-  public KeyGenerator generatePublicKey() throws NoSuchAlgorithmException, InvalidKeySpecException {
-    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(Constants.ALGORITHM);
-    // Initialize key size
-    keyPairGenerator.initialize(2048);
-    // Generate the key pair
-    KeyPair keyPair = keyPairGenerator.genKeyPair();
+  /**
+   * Method to generate the Public and Private Key.
+   * 
+   * @return the RSAPublicKey, RSAPrivateKey and id.
+   */
+  public KeyGenerator generatePublicKey() {
+    try {
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(Constants.ALGORITHM);
+      // Initialize key size
+      keyPairGenerator.initialize(2048);
+      // Generate the key pair
+      KeyPair keyPair = keyPairGenerator.genKeyPair();
 
-    // Create KeyFactory and RSA Keys Specs
-    KeyFactory keyFactory = KeyFactory.getInstance(Constants.ALGORITHM);
-    RSAPublicKeySpec publicKeySpec =
-        keyFactory.getKeySpec(keyPair.getPublic(), RSAPublicKeySpec.class);
-    RSAPrivateKeySpec privateKeySpec =
-        keyFactory.getKeySpec(keyPair.getPrivate(), RSAPrivateKeySpec.class);
+      // Create KeyFactory and RSA Keys Specs
+      KeyFactory keyFactory = KeyFactory.getInstance(Constants.ALGORITHM);
+      RSAPublicKeySpec publicKeySpec =
+          keyFactory.getKeySpec(keyPair.getPublic(), RSAPublicKeySpec.class);
+      RSAPrivateKeySpec privateKeySpec =
+          keyFactory.getKeySpec(keyPair.getPrivate(), RSAPrivateKeySpec.class);
 
-    // Generate (and retrieve) RSA Keys from the KeyFactory using Keys Specs
-    publicRsaKey = (RSAPublicKey) keyFactory.generatePublic(publicKeySpec);
-    privateRsaKey = (RSAPrivateKey) keyFactory.generatePrivate(privateKeySpec);
-    id = UUID.randomUUID().toString();
-    return this;
+      // Generate (and retrieve) RSA Keys from the KeyFactory using Keys Specs
+      publicRsaKey = (RSAPublicKey) keyFactory.generatePublic(publicKeySpec);
+      privateRsaKey = (RSAPrivateKey) keyFactory.generatePrivate(privateKeySpec);
+      id = UUID.randomUUID().toString();
+      return this;
+    } catch (NoSuchAlgorithmException nsaex) {
+      log.error(Constants.ERROR, nsaex);
+      throw new JwtGeneratorException(nsaex.getMessage(),
+          LocationError.GENERATE_PUBLIC_KEY_NSAEX.name());
+    } catch (InvalidKeySpecException ikex) {
+      log.error(Constants.ERROR, ikex);
+      throw new JwtGeneratorException(ikex.getMessage(),
+          LocationError.GENERATE_PUBLIC_KEY_IKEX.name());
+    }
   }
 
-  public RSAdata publicKeyData() {
-    return RSAdata.builder().modulus(getPublicRsaKey().getModulus())
+  public RsaData publicKeyData() {
+    return RsaData.builder().modulus(getPublicRsaKey().getModulus())
         .exponent(getPublicRsaKey().getPublicExponent()).id(id).build();
   }
 
-  public RSAdata privateKeyData() {
-    return RSAdata.builder().modulus(getPrivateRsaKey().getModulus())
+  public RsaData privateKeyData() {
+    return RsaData.builder().modulus(getPrivateRsaKey().getModulus())
         .exponent(getPrivateRsaKey().getPrivateExponent()).id(id).build();
   }
 

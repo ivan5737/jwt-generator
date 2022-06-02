@@ -11,6 +11,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ExceptionHandlerAdvice {
 
+  /**
+   * Method to catch the Exceptions in the all services.
+   * 
+   * @param exception threw by any service method 
+   * @return ResponseEntity
+   */
   @ExceptionHandler(Exception.class)
   public final ResponseEntity<Object> handleAllExceptions(Exception exception) {
     ErrorResponse errorResponse = ErrorResponse.builder()
